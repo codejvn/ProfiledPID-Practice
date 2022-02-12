@@ -14,6 +14,9 @@ import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.Encoder;
 import edu.wpi.first.wpilibj.ADXRS450_Gyro;
+import frc.controllers.NemesisProfiledPID;
+import java.util.function.DoubleSupplier;
+import java.util.function.DoubleConsumer;
 
 /**
  * The VM is configured to automatically run this class, and to call the functions corresponding to
@@ -25,6 +28,7 @@ public class Robot extends TimedRobot {
   private static final String kDefaultAuto = "Default";
   private static final String kGoDistance = "Go Distance";
   private static final String kTurnToAngle = "Turn to Angle";
+  private static final String kControllerTest = "Controller Test";
   private String m_autoSelected;
   private final SendableChooser<String> m_chooser = new SendableChooser<>();
   VictorSP left;
@@ -40,6 +44,9 @@ public class Robot extends TimedRobot {
   private double rightMotors;
   private double leftMotors;
   double targetAngle;
+  private NemesisProfiledPID customProfiledPID;
+  private DoubleSupplier input;
+  private DoubleConsumer output;
 
   /**
    * This function is run when the robot is first started up and should be used for any
@@ -50,6 +57,7 @@ public class Robot extends TimedRobot {
     m_chooser.setDefaultOption("Default Auto", kDefaultAuto);
     m_chooser.addOption("Go Distance", kGoDistance);
     m_chooser.addOption("Turn to Angle", kTurnToAngle);
+    m_chooser.addOption("Controller Test", kControllerTest);
     SmartDashboard.putData("Auto choices", m_chooser);
     left = new VictorSP(1);
     right = new VictorSP(0);
@@ -57,6 +65,9 @@ public class Robot extends TimedRobot {
     leftEncoder = new Encoder(2,3);
     drive = new DifferentialDrive(left, right);
     gyro = new ADXRS450_Gyro();
+    input = () -> rightEncoder.getDistance();
+    output = a -> motorSpeed = a;
+    customProfiledPID = new NemesisProfiledPID(1.3, 0, 0.7, 1.0, 2.0, 0.5, input, output);
     
     
     goDistance = new ProfiledPIDController(
@@ -183,7 +194,15 @@ public class Robot extends TimedRobot {
           right.set(0);
           break;
         }
-        
+      
+      case kControllerTest:
+        customProfiledPID.setSetpoint(10);
+        customProfiledPID.calculate();
+        System.out.println(motorSpeed);
+        left.set(-motorSpeed);
+        right.set(-motorSpeed);
+        System.out.println(rightEncoder.getDistance());
+
       case kDefaultAuto:
       default:
         // Put default auto code here

@@ -40,7 +40,7 @@ public class Robot extends TimedRobot {
   double motorSpeed;
   DifferentialDrive drive;
   ADXRS450_Gyro gyro;
-  private double tolerance;
+  // private double tolerance;
   private double rightMotors;
   private double leftMotors;
   double targetAngle;

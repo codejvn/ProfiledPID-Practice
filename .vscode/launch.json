@@ -6,9 +6,9 @@
   "configurations": [
     {
       "type": "java",
-      "name": "Launch pidtest",
+      "name": "Launch Main",
       "request": "launch",
-      "mainClass": "frc.robot.pidtest",
+      "mainClass": "frc.robot.Main",
       "projectName": "ProfiledPID-Practice"
     },
     {

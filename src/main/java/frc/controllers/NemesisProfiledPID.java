@@ -39,8 +39,6 @@ public class NemesisProfiledPID implements Controller {
 
     // start and end points and tolerance of the profile
     private double endPoint;
-    private double tolerance;
-
     // termination of the controller
     private boolean done;
 
@@ -65,8 +63,6 @@ public class NemesisProfiledPID implements Controller {
         this.maxAcc = maxAcc;
         this.source = source;
         this.output = output;
-        this.tolerance = tolerance;
-
         done = true;
 
         endPoint = 0.0;

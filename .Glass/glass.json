@@ -7,9 +7,27 @@
       "/LiveWindow/Ungrouped/PIDController[1]": "PIDController",
       "/LiveWindow/Ungrouped/PIDController[2]": "PIDController",
       "/SmartDashboard/Auto choices": "String Chooser"
+    },
+    "windows": {
+      "/LiveWindow/Ungrouped/ADXRS450_Gyro[0]": {
+        "window": {
+          "visible": true
+        }
+      },
+      "/LiveWindow/Ungrouped/DifferentialDrive[1]": {
+        "window": {
+          "visible": true
+        }
+      },
+      "/LiveWindow/Ungrouped/PIDController[1]": {
+        "window": {
+          "visible": true
+        }
+      }
     }
   },
   "NetworkTables Settings": {
+    "dsClient": false,
     "mode": "Client",
     "serverTeam": "localhost"
   }

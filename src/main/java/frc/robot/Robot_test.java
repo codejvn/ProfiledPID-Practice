@@ -13,18 +13,27 @@ import edu.wpi.first.wpilibj.motorcontrol.VictorSP;
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
+import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.Encoder;
 import edu.wpi.first.wpilibj.simulation.EncoderSim;
 import edu.wpi.first.wpilibj.ADXRS450_Gyro;
 import edu.wpi.first.wpilibj.simulation.ADXRS450_GyroSim;
+import edu.wpi.first.math.controller.PIDController;
 // import frc.controllers.NemesisProfiledPID;
 // import java.util.function.DoubleSupplier;
 // import java.util.function.DoubleConsumer;
 import edu.wpi.first.wpilibj.simulation.DifferentialDrivetrainSim;
 // import edu.wpi.first.hal.HALValue;
-// import edu.wpi.first.math.kinematics.DifferentialDriveOdometry;
+import edu.wpi.first.math.kinematics.DifferentialDriveOdometry;
+import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.math.trajectory.Trajectory;
+import edu.wpi.first.math.trajectory.TrajectoryConfig;
+import edu.wpi.first.math.trajectory.TrajectoryGenerator;
+import edu.wpi.first.math.kinematics.DifferentialDriveKinematics;
+import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.math.kinematics.DifferentialDriveWheelSpeeds;
 
 /*maybe start using the diff odometry, as you can use that to get the posiiton, however
 look at how it would be implemented in the sim periodic
@@ -48,6 +57,7 @@ public class Robot_test extends TimedRobot {
   VictorSP right;
   ProfiledPIDController goDistance;
   Joystick joystick;
+  Joystick joystick1;
   Encoder rightEncoder;
   Encoder leftEncoder;
   EncoderSim rightEncoderSim;
@@ -66,10 +76,16 @@ public class Robot_test extends TimedRobot {
   private double encoderValue;
   private DifferentialDrivetrainSim driveSim;
   private DCMotor dcMotor;
-  // private DifferentialDriveOdometry odometry;
+  private DifferentialDriveOdometry odometry;
   private Timer timer;
   private boolean runSim;
   private int counter;
+  private boolean inTele;
+  private Trajectory m_Trajectory;
+  private PIDController pidController;
+  private DifferentialDriveKinematics kinematics;
+  private DifferentialDriveWheelSpeeds wheelSpeeds;
+  private ChassisSpeeds chassisSpeeds;
   
 
   /**
@@ -99,20 +115,24 @@ public class Robot_test extends TimedRobot {
     driveSim = new DifferentialDrivetrainSim(dcMotor, 1.0, 7.5, 31.75, 0.08255, 27.5, null);
     counter = 0;
     
-    
     goDistance = new ProfiledPIDController(
     // gains
     1.3, 0, 0.7, 
     // constraints (max Velocity and max Acceleration, respectively)
-    new TrapezoidProfile.Constraints(2, 4));
+    new TrapezoidProfile.Constraints(1, 2));
     joystick = new Joystick(0);
+    joystick1 = new Joystick(1);
 
     right.setInverted(true);
     rightEncoder.setDistancePerPulse(((Math.PI * 6) / 360) * 0.0254);
     leftEncoder.setDistancePerPulse(((Math.PI * 6) / 360) * 0.0254);  
-    // odometry = new DifferentialDriveOdometry(gyro.getRotation2d());
+    odometry = new DifferentialDriveOdometry(gyro.getRotation2d());
     timer = new Timer();
     runSim = false;
+    inTele = false;
+    kinematics = new DifferentialDriveKinematics(Units.inchesToMeters(28));
+    wheelSpeeds = new DifferentialDriveWheelSpeeds();
+    chassisSpeeds = new ChassisSpeeds();
   }
 
   /**
@@ -139,12 +159,15 @@ public class Robot_test extends TimedRobot {
   public void autonomousInit() {
     rightEncoder.reset();
     leftEncoder.reset();
-    System.out.println(rightEncoder);
-    System.out.println(leftEncoder);
+    System.out.println(rightEncoder.getDistance());
+    System.out.println(leftEncoder.getDistance());
     goDistance.reset(0);
     gyro.reset();
     timer.reset();
     timer.start();
+    rightEncoderSim.resetData();
+    leftEncoderSim.resetData();
+    gyroSim.setAngle(0);
   }
 
   /** This function is called periodically during autonomous. */
@@ -188,7 +211,8 @@ public class Robot_test extends TimedRobot {
            }
          }
          motorSpeed = -(goDistance.calculate(encoderValue, 10));
-         System.out.println("power: " + motorSpeed + ", distance: " + encoderValue + ", gyro angle: " + gyro.getAngle());;
+         System.out.println("encoder value:" + encoderValue + "power: " + motorSpeed + ", distance: " + encoderValue + ", gyro angle: " + gyro.getAngle() + ", volts: " + RobotController.getInputVoltage()
+         + ", amps: " + RobotController.getInputVoltage());;
          counter = counter + 1;
          System.out.println("Counter value: " + counter);
          }
@@ -208,7 +232,11 @@ public class Robot_test extends TimedRobot {
   /** This function is called periodically during operator control. */
   @Override
   public void teleopPeriodic() {
-    drive.arcadeDrive(joystick.getY(), joystick.getX());
+    inTele = true;
+    //drive.arcadeDrive(joystick.getY(), joystick.getX());
+    // Using tank drive instead, because the output to the motors relative to the input is more intuitive
+    drive.tankDrive(joystick.getY(), joystick1.getY());
+    
   }
 
   /** This function is called once when the robot is disabled. */
@@ -234,6 +262,8 @@ public class Robot_test extends TimedRobot {
    */
   @Override
   public void simulationPeriodic(){ 
+   //EncoderSim rightEncoderSim = new EncoderSim(rightEncoder);
+    //EncoderSim leftEncoderSim = new EncoderSim(leftEncoder);
     //System.out.println("starting sim periodic");
     // rightEncoderSim.setDistance(encoderValue);
     // leftEncoderSim.setDistance(encoderValue);
@@ -242,7 +272,7 @@ public class Robot_test extends TimedRobot {
     // robot controller voltage.
     leftEncoderSim.setDistance(0);
     rightEncoderSim.setDistance(0);
-    while (runSim){
+    while (runSim || inTele){
       driveSim.setInputs(left.get() * RobotController.getInputVoltage(),
       right.get() * RobotController.getInputVoltage());
       //System.out.println("Right motor percent: " + right.get() + ", left motor percent " + left.get() + ", getInputVoltage: " + RobotController.getInputVoltage());
@@ -251,6 +281,9 @@ public class Robot_test extends TimedRobot {
       // subsystem in a separate thread or have changed the nominal timestep
       // of TimedRobot, this value needs to match it.
       driveSim.update(0.02);
+
+      //updating odometry?
+      odometry.update(gyro.getRotation2d(), leftEncoderSim.getDistance(), rightEncoderSim.getDistance());
   
       // Update all of our sensors.
       leftEncoderSim.setDistance(driveSim.getLeftPositionMeters());
